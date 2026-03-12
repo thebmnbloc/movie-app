@@ -1,9 +1,8 @@
 import express from 'express'
+import movieHandler from '../handlers/movieHandler.js';
 
 const router = express.Router();
 
-router.get('/hello', (req, res) => {
-  res.json({ message: "Hello"})
-});
+router.get('/hello', movieHandler);
 
 export default router;
