@@ -1,225 +1,154 @@
-import { Request, Response, NextFunction } from 'express';
-import { z, ZodError } from 'zod';
-import { pool } from '../config/db';
+import { prisma } from "../config/db";
+import bcrypt from 'bcrypt';
 
-// ======================
-// Reusable Zod Schemas (Zod v4 — correct syntax)
-// ======================
-const idParamSchema = z.object({
-  id: z.coerce
-    .number({
-      error: (iss) =>
-        iss.input === undefined || iss.input === ''
-          ? 'User ID is required'
-          : 'User ID must be a valid number',
-    })
-    .int({ error: 'User ID must be an integer' })
-    .positive({ error: 'User ID must be a positive number' })
-    .max(2147483647, { error: 'User ID is too large' }),
-});
+// Types
+interface CreateUserInput {
+  email: string
+  username: string
+  password: string
+  avatar?: string
+  bio?: string
+}
 
-const createUserSchema = z.object({
-  name: z
-    .string({ error: 'Name is required' })
-    .trim()
-    .min(1, { error: 'Name is required' }),
+interface UpdateUserInput {
+  email?: string
+  username?: string
+  avatar?: string
+  bio?: string
+  password?: string
+}
 
-  email: z
-    .string({ error: 'Email is required' })
-    .trim()
-    .toLowerCase()
-    .email({ error: 'Invalid email format' }),
-});
-
-const updateUserSchema = z
-  .object({
-    name: z
-      .string()
-      .trim()
-      .min(1, { error: 'Name must not be empty' })
-      .optional(),
-
-    email: z
-      .string()
-      .trim()
-      .toLowerCase()
-      .email({ error: 'Invalid email format' })
-      .optional(),
+// CREATE
+export async function createUser(data: CreateUserInput) {
+  const hashedPassword = await bcrypt.hash(data.password, 10)
+  
+  return prisma.user.create({
+    data: {
+      ...data,
+      password: hashedPassword,
+    },
+    select: {
+      id: true,
+      email: true,
+      username: true,
+      avatar: true,
+      bio: true,
+      createdAt: true,
+    },
   })
-  .refine((data) => Object.keys(data).length > 0, {
-    message: 'At least one field (name or email) must be provided for update',
-  });
+}
 
-// ======================
-// Validation Middleware (unchanged — works perfectly)
-// ======================
-const validate = (schema: z.ZodSchema<any>) => {
-  return (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const result = schema.parse({
-        ...req.params,
-        ...req.body,
-      });
+// READ
+export async function getUserById(id: string) {
+  return prisma.user.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      email: true,
+      username: true,
+      avatar: true,
+      bio: true,
+      createdAt: true,
+      _count: {
+        select: {
+          watchlists: true,
+          reviews: true,
+        },
+      },
+    },
+  })
+}
 
-      // Put validated + transformed values back
-      req.params = { ...req.params, ...result };
-      req.body = { ...req.body, ...result };
+export async function getUserByEmail(email: string) {
+  return prisma.user.findUnique({
+    where: { email },
+  })
+}
 
-      next();
-    } catch (err) {
-      if (err instanceof ZodError) {
-        return res.status(400).json({
-          success: false,
-          message: 'Validation failed',
-          errors: err.issues.map((e) => ({
-            field: e.path.join('.') || 'body',
-            message: e.message,
-          })),
-        });
-      }
-      next(err);
-    }
-  };
-};
+export async function getUserByUsername(username: string) {
+  return prisma.user.findUnique({
+    where: { username },
+    select: {
+      id: true,
+      username: true,
+      avatar: true,
+      bio: true,
+      watchlists: {
+        where: { isPublic: true },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          _count: {
+            select: { movies: true },
+          },
+        },
+      },
+      reviews: {
+        select: {
+          id: true,
+          rating: true,
+          content: true,
+          createdAt: true,
+          movie: {
+            select: {
+              id: true,
+              title: true,
+              posterUrl: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+      },
+    },
+  })
+}
 
-export { idParamSchema, createUserSchema, updateUserSchema, validate };
-
-
-// ======================
-// Controllers
-// ======================
-
-// GET /api/v1/users
-export const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const result = await pool.query(
-      'SELECT id, name, email, created_at, updated_at FROM users ORDER BY created_at DESC'
-    );
-
-    res.status(200).json({
-      success: true,
-      count: result.rowCount,
-      data: result.rows,
-    });
-  } catch (error) {
-    next(error);
+// UPDATE
+export async function updateUser(id: string, data: UpdateUserInput) {
+  if (data.password) {
+    data.password = await bcrypt.hash(data.password, 10)
   }
-};
 
-// GET /api/v1/users/:id
-export const getUserById = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const id = Number(req.params.id); // already validated & coerced by Zod
+  return prisma.user.update({
+    where: { id },
+    data,
+    select: {
+      id: true,
+      email: true,
+      username: true,
+      avatar: true,
+      bio: true,
+      updatedAt: true,
+    },
+  })
+}
 
-    const result = await pool.query(
-      'SELECT id, name, email, created_at, updated_at FROM users WHERE id = $1',
-      [id]
-    );
+// DELETE
+export async function deleteUser(id: string) {
+  return prisma.user.delete({
+    where: { id },
+  })
+}
 
-    if (result.rowCount === 0) {
-      return res.status(404).json({
-        success: false,
-        message: `User with ID ${id} not found`,
-      });
-    }
+// User Stats
+export async function getUserStats(id: string) {
+  const [watchlistCount, reviewCount, watchHistoryCount] = await Promise.all([
+    prisma.watchlist.count({ where: { userId: id } }),
+    prisma.review.count({ where: { userId: id } }),
+    prisma.watchHistory.count({ where: { userId: id } }),
+  ])
 
-    res.status(200).json({
-      success: true,
-      data: result.rows[0],
-    });
-  } catch (error) {
-    next(error);
+  const avgRating = await prisma.review.aggregate({
+    where: { userId: id },
+    _avg: { rating: true },
+  })
+
+  return {
+    watchlistCount,
+    reviewCount,
+    watchHistoryCount,
+    averageRatingGiven: avgRating._avg.rating,
   }
-};
-
-// POST /api/v1/users
-export const createUser = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { name, email } = req.body;
-
-    const result = await pool.query(
-      'INSERT INTO users (name, email) VALUES ($1, $2) RETURNING id, name, email, created_at, updated_at',
-      [name, email]
-    );
-
-    res.status(201).json({
-      success: true,
-      message: 'User created successfully',
-      data: result.rows[0],
-    });
-  } catch (error: any) {
-    if (error.code === '23505') {
-      return res.status(409).json({
-        success: false,
-        message: 'Email already exists',
-      });
-    }
-    next(error);
-  }
-};
-
-// PUT /api/v1/users/:id
-export const updateUser = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const id = Number(req.params.id);
-    const { name, email } = req.body;
-
-    const result = await pool.query(
-      `UPDATE users 
-       SET name = COALESCE($1, name), 
-           email = COALESCE($2, email),
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = $3 
-       RETURNING id, name, email, created_at, updated_at`,
-      [name, email, id]
-    );
-
-    if (result.rowCount === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found',
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: 'User updated successfully',
-      data: result.rows[0],
-    });
-  } catch (error: any) {
-    if (error.code === '23505') {
-      return res.status(409).json({
-        success: false,
-        message: 'Email already in use',
-      });
-    }
-    next(error);
-  }
-};
-
-// DELETE /api/v1/users/:id
-export const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const id = Number(req.params.id);
-
-    const result = await pool.query(
-      'DELETE FROM users WHERE id = $1 RETURNING id',
-      [id]
-    );
-
-    if (result.rowCount === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found',
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: `User ${id} deleted successfully`,
-      data: { id },
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+}

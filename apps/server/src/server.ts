@@ -1,5 +1,6 @@
 import express from 'express';
-import { config } from "dotenv"
+import { config } from "dotenv";
+import { connectToDatabase } from "./config/db";
 
 // import movieRoute
 import movieRoute from "./routes/movieRoute"
@@ -7,6 +8,7 @@ import userRoute from "./routes/userRoute"
 import watchlistRoute from "./routes/watchlistRoute"
 
 config();
+connectToDatabase();
 
 const app = express();
 

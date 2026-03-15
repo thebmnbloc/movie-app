@@ -12,8 +12,214 @@ datasource db {
   provider = "postgresql"
 }
 
+// ============================================
+// USER MODEL
+// ============================================
 model User {
-  id    Int    @id @default(autoincrement())
-  email String @unique
-  name  String
+  id       String  @id @default(cuid())
+  email    String  @unique
+  username String  @unique
+  password String // hashed password
+  avatar   String? // URL to avatar image
+  bio      String? @db.Text
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  watchlists   Watchlist[]
+  reviews      Review[]
+  watchHistory WatchHistory[]
+
+  @@index([email])
+  @@index([username])
+  @@map("users")
+}
+
+// ============================================
+// MOVIE MODEL
+// ============================================
+model Movie {
+  id       String  @id @default(cuid())
+  tmdbId   String? @unique // The Movie Database ID for syncing
+  title    String
+  slug     String  @unique // URL-friendly title
+  overview String  @db.Text
+  tagline  String?
+
+  // Media
+  posterUrl   String?
+  backdropUrl String?
+  trailerUrl  String?
+
+  // Metadata
+  releaseDate DateTime?
+  runtime     Int? // in minutes
+  budget      Int? // in USD
+  revenue     Int? // in USD
+  rating      Float?    @db.Real // average rating 0-10
+
+  // Categorization
+  genres Genre[]
+  cast   CastMember[]
+  crew   CrewMember[]
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  watchlists   WatchlistMovie[]
+  reviews      Review[]
+  watchHistory WatchHistory[]
+
+  @@index([title])
+  @@index([releaseDate])
+  @@index([rating])
+  @@map("movies")
+}
+
+// ============================================
+// WATCHLIST MODEL
+// ============================================
+model Watchlist {
+  id          String  @id @default(cuid())
+  name        String
+  description String? @db.Text
+  isPublic    Boolean @default(false) // Public or private watchlist
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  movies WatchlistMovie[]
+
+  @@unique([userId, name]) // User can't have duplicate watchlist names
+  @@index([userId])
+  @@map("watchlists")
+}
+
+// Junction table for Watchlist <-> Movie many-to-many relation
+model WatchlistMovie {
+  id      String   @id @default(cuid())
+  addedAt DateTime @default(now())
+  notes   String?  @db.Text // User's personal notes about the movie
+
+  // Relations
+  watchlistId String
+  watchlist   Watchlist @relation(fields: [watchlistId], references: [id], onDelete: Cascade)
+
+  movieId String
+  movie   Movie  @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@unique([watchlistId, movieId]) // Prevent duplicate movies in same watchlist
+  @@index([watchlistId])
+  @@index([movieId])
+  @@map("watchlist_movies")
+}
+
+// ============================================
+// SUPPORTING MODELS
+// ============================================
+
+model Genre {
+  id   String @id @default(cuid())
+  name String @unique
+  slug String @unique
+
+  movies Movie[]
+
+  @@map("genres")
+}
+
+model CastMember {
+  id        String @id @default(cuid())
+  personId  String // Reference to Person
+  character String // Character name in the movie
+  order     Int    @default(0) // Billing order
+
+  movieId String
+  movie   Movie  @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@unique([movieId, personId, character])
+  @@index([movieId])
+  @@index([personId])
+  @@map("cast_members")
+}
+
+model CrewMember {
+  id         String @id @default(cuid())
+  personId   String
+  job        String // e.g., "Director", "Writer", "Producer"
+  department String // e.g., "Directing", "Writing", "Production"
+
+  movieId String
+  movie   Movie  @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@unique([movieId, personId, job])
+  @@index([movieId])
+  @@map("crew_members")
+}
+
+model Person {
+  id         String    @id @default(cuid())
+  tmdbId     String?   @unique
+  name       String
+  slug       String    @unique
+  biography  String?   @db.Text
+  birthday   DateTime?
+  deathday   DateTime?
+  birthplace String?
+  profileUrl String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+  @@map("people")
+}
+
+model Review {
+  id        String  @id @default(cuid())
+  rating    Float   @db.Real // 0-10 rating
+  content   String  @db.Text
+  isSpoiler Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  movieId String
+  movie   Movie  @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, movieId]) // One review per user per movie
+  @@index([movieId])
+  @@index([userId])
+  @@index([rating])
+  @@map("reviews")
+}
+
+model WatchHistory {
+  id        String   @id @default(cuid())
+  watchedAt DateTime @default(now())
+  progress  Int      @default(0) // seconds watched
+  completed Boolean  @default(false)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  movieId String
+  movie   Movie  @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, movieId]) // One history entry per user per movie
+  @@index([userId])
+  @@index([watchedAt])
+  @@map("watch_history")
 }
