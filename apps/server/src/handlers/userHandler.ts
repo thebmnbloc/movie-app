@@ -1,154 +1,93 @@
-import { prisma } from "../config/db";
-import bcrypt from 'bcrypt';
+// src/controllers/user.controller.ts
+import { Request, Response } from 'express';
+import { UserService } from '../services/userService';  // note: you had userService → fix capitalization if needed
 
-// Types
-interface CreateUserInput {
-  email: string
-  username: string
-  password: string
-  avatar?: string
-  bio?: string
-}
+const userService = new UserService(); // or better: inject via constructor
 
-interface UpdateUserInput {
-  email?: string
-  username?: string
-  avatar?: string
-  bio?: string
-  password?: string
-}
-
-// CREATE
-export async function createUser(data: CreateUserInput) {
-  const hashedPassword = await bcrypt.hash(data.password, 10)
-  
-  return prisma.user.create({
-    data: {
-      ...data,
-      password: hashedPassword,
-    },
-    select: {
-      id: true,
-      email: true,
-      username: true,
-      avatar: true,
-      bio: true,
-      createdAt: true,
-    },
-  })
-}
-
-// READ
-export async function getUserById(id: string) {
-  return prisma.user.findUnique({
-    where: { id },
-    select: {
-      id: true,
-      email: true,
-      username: true,
-      avatar: true,
-      bio: true,
-      createdAt: true,
-      _count: {
-        select: {
-          watchlists: true,
-          reviews: true,
-        },
-      },
-    },
-  })
-}
-
-export async function getUserByEmail(email: string) {
-  return prisma.user.findUnique({
-    where: { email },
-  })
-}
-
-export async function getUserByUsername(username: string) {
-  return prisma.user.findUnique({
-    where: { username },
-    select: {
-      id: true,
-      username: true,
-      avatar: true,
-      bio: true,
-      watchlists: {
-        where: { isPublic: true },
-        select: {
-          id: true,
-          name: true,
-          description: true,
-          _count: {
-            select: { movies: true },
-          },
-        },
-      },
-      reviews: {
-        select: {
-          id: true,
-          rating: true,
-          content: true,
-          createdAt: true,
-          movie: {
-            select: {
-              id: true,
-              title: true,
-              posterUrl: true,
-            },
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 5,
-      },
-    },
-  })
-}
-
-// UPDATE
-export async function updateUser(id: string, data: UpdateUserInput) {
-  if (data.password) {
-    data.password = await bcrypt.hash(data.password, 10)
+export class UserController {
+  async createUser(req: Request, res: Response) {
+    try {
+      const user = await userService.createUser(req.body);
+      res.status(201).json(user);
+    } catch (error) {
+      res.status(400).json({ error: (error as Error).message });
+    }
   }
 
-  return prisma.user.update({
-    where: { id },
-    data,
-    select: {
-      id: true,
-      email: true,
-      username: true,
-      avatar: true,
-      bio: true,
-      updatedAt: true,
-    },
-  })
-}
+  // ── Use generics here ──
+  async getUserById(req: Request<{ id: string }>, res: Response) {
+    try {
+      const { id } = req.params;  // now id: string (TS knows it's present)
 
-// DELETE
-export async function deleteUser(id: string) {
-  return prisma.user.delete({
-    where: { id },
-  })
-}
+      const user = await userService.getUserById(id);
+      if (!user) return res.status(404).json({ error: 'User not found' });
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ error: 'Server error' });
+    }
+  }
 
-// User Stats
-export async function getUserStats(id: string) {
-  const [watchlistCount, reviewCount, watchHistoryCount] = await Promise.all([
-    prisma.watchlist.count({ where: { userId: id } }),
-    prisma.review.count({ where: { userId: id } }),
-    prisma.watchHistory.count({ where: { userId: id } }),
-  ])
+  async getUserByEmail(req: Request, res: Response) {
+    try {
+      const { email } = req.body;
+      if (typeof email !== 'string') {
+        return res.status(400).json({ error: 'Email required' });
+      }
 
-  const avgRating = await prisma.review.aggregate({
-    where: { userId: id },
-    _avg: { rating: true },
-  })
+      const user = await userService.getUserByEmail(email);
+      if (!user) return res.status(404).json({ error: 'User not found' });
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ error: 'Server error' });
+    }
+  }
 
-  return {
-    watchlistCount,
-    reviewCount,
-    watchHistoryCount,
-    averageRatingGiven: avgRating._avg.rating,
+  async getUserByUsername(req: Request, res: Response) {
+    try {
+      const { username } = req.body;
+      if (typeof username !== 'string') {
+        return res.status(400).json({ error: 'Username required' });
+      }
+
+      const user = await userService.getUserByUsername(username);
+      if (!user) return res.status(404).json({ error: 'User not found' });
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ error: 'Server error' });
+    }
+  }
+
+  // ── Again generics for params ──
+  async updateUser(req: Request<{ id: string }>, res: Response) {
+    try {
+      const { id } = req.params;
+
+      // Assuming you accept partial update data in body
+      const updated = await userService.updateUser(id, req.body);
+      if (!updated) return res.status(404).json({ error: 'User not found' });
+      res.json(updated);
+    } catch (error) {
+      res.status(400).json({ error: (error as Error).message });
+    }
+  }
+
+  async deleteUser(req: Request<{ id: string }>, res: Response) {
+    try {
+      const { id } = req.params;
+      await userService.deleteUser(id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: 'Server error' });
+    }
+  }
+
+  async getUserStats(req: Request<{ id: string }>, res: Response) {
+    try {
+      const { id } = req.params;
+      const stats = await userService.getUserStats(id);
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ error: 'Server error' });
+    }
   }
 }

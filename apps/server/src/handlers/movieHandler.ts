@@ -1,5 +1,96 @@
-import { prisma } from "../config/db";
+// src/controllers/movie.controller.ts
+import { Request, Response } from "express";
+import { MovieService } from "../services/movieService";
 
+const movieService = new MovieService(); // or inject
+
+export class MovieController {
+  async createMovie(req: Request, res: Response) {
+    try {
+      const movie = await movieService.createMovie(req.body);
+      res.status(201).json(movie);
+    } catch (error) {
+      res.status(400).json({ error: (error as Error).message });
+    }
+  }
+
+  async getMovieById(req: Request<{ id: string }>, res: Response) {
+    try {
+      const { id } = req.params;
+      const movie = await movieService.getMovieById(id);
+      if (!movie) return res.status(404).json({ error: "Movie not found" });
+      res.json(movie);
+    } catch (error) {
+      res.status(500).json({ error: "Server error" });
+    }
+  }
+
+  async getMovieBySlug(req: Request<{ slug: string }>, res: Response) {
+    try {
+      const { slug } = req.params;
+      const movie = await movieService.getMovieBySlug(slug);
+      if (!movie) return res.status(404).json({ error: "Movie not found" });
+      res.json(movie);
+    } catch (error) {
+      res.status(500).json({ error: "Server error" });
+    }
+  }
+
+  async getMovies(req: Request, res: Response) {
+    try {
+      // You can add query validation (zod/joi) here later
+      const filters = req.query as any; // in real app → parse & validate
+      const result = await movieService.getMovies(filters);
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ error: "Server error" });
+    }
+  }
+
+  async updateMovie(req: Request<{ id: string }>, res: Response) {
+    try {
+      const { id } = req.params;
+      const updated = await movieService.updateMovie(id, req.body);
+      if (!updated) return res.status(404).json({ error: "Movie not found" });
+      res.json(updated);
+    } catch (error) {
+      res.status(400).json({ error: (error as Error).message });
+    }
+  }
+
+  async deleteMovie(req: Request<{ id: string }>, res: Response) {
+    try {
+      const { id } = req.params;
+      await movieService.deleteMovie(id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Server error" });
+    }
+  }
+
+  async getMovieStats(req: Request<{ id: string }>, res: Response) {
+    try {
+      const { id } = req.params;
+      const stats = await movieService.getMovieStats(id);
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ error: "Server error" });
+    }
+  }
+
+  async getTrendingMovies(req: Request, res: Response) {
+    try {
+      const limit = Number(req.query.limit) || 10;
+      const movies = await movieService.getTrendingMovies(limit);
+      res.json(movies);
+    } catch (error) {
+      res.status(500).json({ error: "Server error" });
+    }
+  }
+}
+
+
+/*
 // Types
 interface CreateMovieInput {
   tmdbId?: string
@@ -250,3 +341,11 @@ export async function getTrendingMovies(limit = 10) {
     },
   })
 }
+
+
+  // You can add more movie-related handlers here, such as:
+  - getMovies
+  - createMovie
+  - updateMovie
+  - deleteMovie
+*/

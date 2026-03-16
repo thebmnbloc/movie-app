@@ -1,5 +1,99 @@
-import { prisma } from "../config/db";
+// src/controllers/watchlist.controller.ts
+import { Request, Response } from "express";
+import { WatchlistService } from "../services/watchlistService";
 
+const watchlistService = new WatchlistService();
+
+// All routes should be protected with authenticate middleware
+export class WatchlistController {
+  async createWatchlist(req: Request,{user}, res: Response) {
+    try {
+      const userId = user!.id; // from auth middleware
+      const watchlist = await watchlistService.createWatchlist(userId, req.body);
+      res.status(201).json(watchlist);
+    } catch (error) {
+      res.status(400).json({ error: (error as Error).message });
+    }
+  }
+
+  async getWatchlistById(req: Request<{ id: string }>, {user}, res: Response) {
+    try {
+      const { id } = req.params;
+      const userId = user!.id; // optional for public watchlists
+      const watchlist = await watchlistService.getWatchlistById(id, userId);
+      res.json(watchlist);
+    } catch (error) {
+      res.status(404).json({ error: (error as Error).message || "Watchlist not found" });
+    }
+  }
+
+  async getMyWatchlists(req: Request,{user}, res: Response) {
+    try {
+      const userId = user!.id;
+      const { page, limit, isPublic } = req.query as any;
+      const result = await watchlistService.getUserWatchlists(userId, {
+        page: Number(page) || 1,
+        limit: Number(limit) || 20,
+        isPublic: isPublic === "true" ? true : undefined,
+      });
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ error: "Server error" });
+    }
+  }
+
+  async updateWatchlist(req: Request<{ id: string }>, {user}, res: Response) {
+    try {
+      const { id } = req.params;
+      const userId = user!.id;
+      const updated = await watchlistService.updateWatchlist(id, req.body, userId);
+      res.json(updated);
+    } catch (error) {
+      res.status(400).json({ error: (error as Error).message });
+    }
+  }
+
+  async deleteWatchlist(req: Request<{ id: string }>, {user}, res: Response) {
+    try {
+      const { id } = req.params;
+      const userId = user!.id;
+      await watchlistService.deleteWatchlist(id, userId);
+      res.status(204).send();
+    } catch (error) {
+      res.status(400).json({ error: (error as Error).message });
+    }
+  }
+
+  async addMovie(req: Request<{ id: string }>, {user}, res: Response) {
+    try {
+      const { id } = req.params; // watchlistId
+      const { movieId } = req.body;
+      const userId = user!.id;
+
+      if (!movieId) return res.status(400).json({ error: "movieId required" });
+
+      const updatedWatchlist = await watchlistService.addMovieToWatchlist(id, movieId, userId);
+      res.json(updatedWatchlist);
+    } catch (error) {
+      res.status(400).json({ error: (error as Error).message });
+    }
+  }
+
+  async removeMovie(req: Request<{ id: string; movieId: string }>, {user}, res: Response) {
+    try {
+      const { id, movieId } = req.params;
+      const userId = user!.id;
+
+      const updatedWatchlist = await watchlistService.removeMovieFromWatchlist(id, movieId, userId);
+      res.json(updatedWatchlist);
+    } catch (error) {
+      res.status(400).json({ error: (error as Error).message });
+    }
+  }
+}
+
+
+/*
 // Types
 interface CreateWatchlistInput {
   name: string
@@ -315,3 +409,4 @@ export async function cloneWatchlist(
     },
   })
 }
+*/
