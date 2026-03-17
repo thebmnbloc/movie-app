@@ -90,6 +90,20 @@ export class WatchlistController {
       res.status(400).json({ error: (error as Error).message });
     }
   }
+
+  async updateMovieNotes(req: Request<{ id: string; movieId: string }>, {user}, res: Response) {
+    try {
+      const { id, movieId } = req.params;
+      const { notes } = req.body;
+      const userId = user!.id;
+
+      const updatedWatchlist = await watchlistService.updateMovieNotes(id, movieId, notes, userId);
+      res.json(updatedWatchlist);
+    } catch (error) {
+      res.status(400).json({ error: (error as Error).message });
+    }
+  }
+
 }
 
 

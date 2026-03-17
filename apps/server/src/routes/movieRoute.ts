@@ -1,24 +1,17 @@
 import express from 'express';
-import { 
-  createMovie, 
-  getMovieById, 
-  updateMovie, 
-  deleteMovie, 
-  getMovieBySlug, 
-  getMovieStats, 
-  getTrendingMovies, 
-  getMovies 
-} from '../handlers/movieHandler';
+import { MovieController } from '../controllers/movieController';
 
 const router = express.Router();
 
-router.post('/', createMovie);
-router.get('/:id', getMovieById);
-router.put('/:id', updateMovie);
-router.delete('/:id', deleteMovie);
-router.get('/slug/:slug', getMovieBySlug);
-router.get('/:id/stats', getMovieStats);
-router.get('/trending', getTrendingMovies);
-router.get('/', getMovies);
+const movieController = new MovieController();
+
+router.post('/', movieController.createMovie.bind(movieController));
+router.get('/:id', movieController.getMovieById.bind(movieController));
+router.put('/:id', movieController.updateMovie.bind(movieController));
+router.delete('/:id', movieController.deleteMovie.bind(movieController));
+router.get('/slug/:slug', movieController.getMovieBySlug.bind(movieController));
+router.get('/:id/stats', movieController.getMovieStats.bind(movieController));
+router.get('/trending', movieController.getTrendingMovies.bind(movieController));
+router.get('/', movieController.getMovies.bind(movieController));
 
 export default router;
