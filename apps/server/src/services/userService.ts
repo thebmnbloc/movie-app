@@ -72,4 +72,9 @@ export class UserService {
       averageRatingGiven: avgRating,
     };
   }
+
+   async getUsers(page: number = 1, limit: number = 10) {
+    const offset = (page - 1) * limit;
+    return userRepo.findAll(offset, limit);
+  }
 }

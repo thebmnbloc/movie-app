@@ -28,9 +28,10 @@ model User {
   updatedAt DateTime @updatedAt
 
   // Relations
-  watchlists   Watchlist[]
-  reviews      Review[]
-  watchHistory WatchHistory[]
+  watchlists    Watchlist[]
+  reviews       Review[]
+  watchHistory  WatchHistory[]
+  refreshTokens RefreshToken[]
 
   @@index([email])
   @@index([username])
@@ -222,4 +223,18 @@ model WatchHistory {
   @@index([userId])
   @@index([watchedAt])
   @@map("watch_history")
+}
+
+model RefreshToken {
+  id          String    @id @default(uuid())
+  hashedToken String
+  userId      String
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+  revokedAt   DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
