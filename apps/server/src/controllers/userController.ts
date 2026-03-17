@@ -14,6 +14,17 @@ export class UserController {
     }
   }
 
+  async getUsers(req: Request, res: Response) {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const users = await userService.getUsers(page, limit);
+      res.json(users);
+    } catch (error) {
+      res.status(500).json({ error: 'Server error' });
+    }
+  }
+
   // ── Use generics here ──
   async getUserById(req: Request<{ id: string }>, res: Response) {
     try {

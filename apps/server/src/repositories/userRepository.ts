@@ -153,6 +153,21 @@ export class UserRepository {
     return prisma.user.delete({ where: { id } });
   }
 
+  async findAll(offset: number, limit: number): Promise<Pick<User, "id" | "email" | "username" | "avatar" | "bio" | "createdAt">[]> {
+    return prisma.user.findMany({
+      skip: offset,
+      take: limit,
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        avatar: true,
+        bio: true,
+        createdAt: true,
+      },
+    });
+  }
+
   // Stats helpers (pure data)
   async countWatchlists(userId: string): Promise<number> {
     return prisma.watchlist.count({ where: { userId } });

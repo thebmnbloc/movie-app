@@ -27,6 +27,13 @@ export class WatchlistService {
     return watchlist;
   }
 
+  async getMoviesInWatchlist(watchlistId: string, userId?: string) {
+    const watchlist = await watchlistRepo.findById(watchlistId, userId);
+    if (!watchlist) throw new Error("Watchlist not found or access denied");
+
+    return watchlistRepo.getMovies(watchlistId);
+  }
+
   async getUserWatchlists(
     userId: string,
     options: { isPublic?: boolean; page?: number; limit?: number } = {}

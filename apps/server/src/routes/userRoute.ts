@@ -18,6 +18,8 @@ router.put('/:id', userController.updateUser.bind(userController));
 
 router.delete('/:id', userController.deleteUser.bind(userController));
 
+router.get('/', userController.getUsers.bind(userController)); // For pagination: /?page=1&limit=10
+
 // ────────────────────────────────────────────────
 // Lookup by unique fields (email / username)
 // ────────────────────────────────────────────────

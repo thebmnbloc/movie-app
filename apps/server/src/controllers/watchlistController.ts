@@ -27,6 +27,17 @@ export class WatchlistController {
     }
   }
 
+  async getMoviesInWatchlist(req: Request<{ id: string }>, {user}, res: Response) {
+    try {
+      const { id } = req.params;
+      const userId = user!.id;
+      const movies = await watchlistService.getMoviesInWatchlist(id, userId);
+      res.json(movies);
+    } catch (error) {
+      res.status(404).json({ error: (error as Error).message || "Watchlist not found" });
+    }
+  }
+
   async getMyWatchlists(req: Request,{user}, res: Response) {
     try {
       const userId = user!.id;
