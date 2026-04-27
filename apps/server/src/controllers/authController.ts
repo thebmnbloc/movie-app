@@ -2,9 +2,14 @@
 import { Request, Response } from 'express';
 import { AuthService } from '../services/authService';
 
-const authService = new AuthService();
 
 export class AuthController {
+  private authService: AuthService;
+
+  constructor(authService: AuthService) {
+    this.authService = authService;
+  }
+
   async register(req: Request, res: Response) {
     try {
       const { email, username, password } = req.body;
@@ -12,7 +17,7 @@ export class AuthController {
         return res.status(400).json({ error: 'Email and password required' });
       }
 
-      const tokens = await authService.register({ email, username, password });
+      const tokens = await this.authService.register({ email, username, password });
       res.status(201).json(tokens);
     } catch (error) {
       res.status(400).json({ error: (error as Error).message });
@@ -26,7 +31,7 @@ export class AuthController {
         return res.status(400).json({ error: 'Email and password required' });
       }
 
-      const tokens = await authService.login(email, password);
+      const tokens = await this.authService.login(email, password);
       res.json(tokens);
     } catch (error) {
       res.status(401).json({ error: (error as Error).message });
@@ -38,7 +43,7 @@ export class AuthController {
       const { refreshToken } = req.body;
       if (!refreshToken) return res.status(400).json({ error: 'Refresh token required' });
 
-      const tokens = await authService.refresh(refreshToken);
+      const tokens = await this.authService.refresh(refreshToken);
       res.json(tokens);
     } catch (error) {
       res.status(401).json({ error: (error as Error).message });
@@ -49,7 +54,7 @@ export class AuthController {
     try {
       const { refreshToken } = req.body;
       if (refreshToken) {
-        await authService.logout(refreshToken);
+        await this.authService.logout(refreshToken);
       }
       res.status(204).send();
     } catch (error) {
@@ -61,7 +66,7 @@ export class AuthController {
   async logoutAll(req: Request, res: Response) {
     try {
       if (!req.user?.id) throw new Error('Not authenticated');
-      await authService.logoutAll(req.user.id);
+      await this.authService.logoutAll(req.user.id);
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: 'Server error' });

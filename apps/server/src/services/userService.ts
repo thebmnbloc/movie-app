@@ -22,25 +22,31 @@ interface UpdateUserInput {
 }
 
 export class UserService {
+  private userRepo: UserRepository;
+
+  constructor(userRepo: UserRepository) {
+    this.userRepo = userRepo;
+  }
+
   async createUser(data: CreateUserInput) {
     const hashedPassword = await bcrypt.hash(data.password, 10);
 
-    return userRepo.create({
+    return this.userRepo.create({
       ...data,
       password: hashedPassword,
     });
   }
 
   async getUserById(id: string) {
-    return userRepo.findById(id);
+    return this.userRepo.findById(id);
   }
 
   async getUserByEmail(email: string) {
-    return userRepo.findByEmail(email);
+    return this.userRepo.findByEmail(email);
   }
 
   async getUserByUsername(username: string) {
-    return userRepo.findByUsername(username);
+    return this.userRepo.findByUsername(username);
   }
 
   async updateUser(id: string, data: UpdateUserInput) {
@@ -50,19 +56,19 @@ export class UserService {
       updateData.password = await bcrypt.hash(data.password, 10);
     }
 
-    return userRepo.update(id, updateData);
+    return this.userRepo.update(id, updateData);
   }
 
   async deleteUser(id: string) {
-    return userRepo.delete(id);
+    return this.userRepo.delete(id);
   }
 
   async getUserStats(id: string) {
     const [watchlistCount, reviewCount, watchHistoryCount, avgRating] = await Promise.all([
-      userRepo.countWatchlists(id),
-      userRepo.countReviews(id),
-      userRepo.countWatchHistory(id),
-      userRepo.getAverageRating(id),
+      this.userRepo.countWatchlists(id),
+      this.userRepo.countReviews(id),
+      this.userRepo.countWatchHistory(id),
+      this.userRepo.getAverageRating(id),
     ]);
 
     return {
@@ -75,6 +81,6 @@ export class UserService {
 
    async getUsers(page: number = 1, limit: number = 10) {
     const offset = (page - 1) * limit;
-    return userRepo.findAll(offset, limit);
+    return this.userRepo.findAll(offset, limit);
   }
 }

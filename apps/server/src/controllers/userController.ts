@@ -2,12 +2,18 @@
 import { Request, Response } from 'express';
 import { UserService } from '../services/userService';  // note: you had userService → fix capitalization if needed
 
-const userService = new UserService(); // or better: inject via constructor
+// const userService = new UserService(); // or better: inject via constructor
 
 export class UserController {
+  private userService: UserService;
+
+  constructor(userService: UserService) {
+    this.userService = userService;
+  }
+
   async createUser(req: Request, res: Response) {
     try {
-      const user = await userService.createUser(req.body);
+      const user = await this.userService.createUser(req.body);
       res.status(201).json(user);
     } catch (error) {
       res.status(400).json({ error: (error as Error).message });
@@ -18,7 +24,7 @@ export class UserController {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
-      const users = await userService.getUsers(page, limit);
+      const users = await this.userService.getUsers(page, limit);
       res.json(users);
     } catch (error) {
       res.status(500).json({ error: 'Server error' });
@@ -30,7 +36,7 @@ export class UserController {
     try {
       const { id } = req.params;  // now id: string (TS knows it's present)
 
-      const user = await userService.getUserById(id);
+      const user = await this.userService.getUserById(id);
       if (!user) return res.status(404).json({ error: 'User not found' });
       res.json(user);
     } catch (error) {
@@ -45,7 +51,7 @@ export class UserController {
         return res.status(400).json({ error: 'Email required' });
       }
 
-      const user = await userService.getUserByEmail(email);
+      const user = await this.userService.getUserByEmail(email);
       if (!user) return res.status(404).json({ error: 'User not found' });
       res.json(user);
     } catch (error) {
@@ -60,7 +66,7 @@ export class UserController {
         return res.status(400).json({ error: 'Username required' });
       }
 
-      const user = await userService.getUserByUsername(username);
+      const user = await this.userService.getUserByUsername(username);
       if (!user) return res.status(404).json({ error: 'User not found' });
       res.json(user);
     } catch (error) {
@@ -74,7 +80,7 @@ export class UserController {
       const { id } = req.params;
 
       // Assuming you accept partial update data in body
-      const updated = await userService.updateUser(id, req.body);
+      const updated = await this.userService.updateUser(id, req.body);
       if (!updated) return res.status(404).json({ error: 'User not found' });
       res.json(updated);
     } catch (error) {
@@ -85,7 +91,7 @@ export class UserController {
   async deleteUser(req: Request<{ id: string }>, res: Response) {
     try {
       const { id } = req.params;
-      await userService.deleteUser(id);
+      await this.userService.deleteUser(id);
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: 'Server error' });
@@ -95,7 +101,7 @@ export class UserController {
   async getUserStats(req: Request<{ id: string }>, res: Response) {
     try {
       const { id } = req.params;
-      const stats = await userService.getUserStats(id);
+      const stats = await this.userService.getUserStats(id);
       res.json(stats);
     } catch (error) {
       res.status(500).json({ error: 'Server error' });

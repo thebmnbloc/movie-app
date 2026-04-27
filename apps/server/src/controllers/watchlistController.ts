@@ -2,14 +2,19 @@
 import { Request, Response } from "express";
 import { WatchlistService } from "../services/watchlistService";
 
-const watchlistService = new WatchlistService();
+// const watchlistService = new WatchlistService();
 
 // All routes should be protected with authenticate middleware
 export class WatchlistController {
+  private watchlistService: WatchlistService;
+
+  constructor(watchlistService: WatchlistService) {
+    this.watchlistService = watchlistService;
+  }
   async createWatchlist(req: Request,{user}, res: Response) {
     try {
       const userId = user!.id; // from auth middleware
-      const watchlist = await watchlistService.createWatchlist(userId, req.body);
+      const watchlist = await this.watchlistService.createWatchlist(userId, req.body);
       res.status(201).json(watchlist);
     } catch (error) {
       res.status(400).json({ error: (error as Error).message });
@@ -20,7 +25,7 @@ export class WatchlistController {
     try {
       const { id } = req.params;
       const userId = user!.id; // optional for public watchlists
-      const watchlist = await watchlistService.getWatchlistById(id, userId);
+      const watchlist = await this.watchlistService.getWatchlistById(id, userId);
       res.json(watchlist);
     } catch (error) {
       res.status(404).json({ error: (error as Error).message || "Watchlist not found" });
@@ -31,7 +36,7 @@ export class WatchlistController {
     try {
       const { id } = req.params;
       const userId = user!.id;
-      const movies = await watchlistService.getMoviesInWatchlist(id, userId);
+      const movies = await this.watchlistService.getMoviesInWatchlist(id, userId);
       res.json(movies);
     } catch (error) {
       res.status(404).json({ error: (error as Error).message || "Watchlist not found" });
@@ -42,7 +47,7 @@ export class WatchlistController {
     try {
       const userId = user!.id;
       const { page, limit, isPublic } = req.query as any;
-      const result = await watchlistService.getUserWatchlists(userId, {
+      const result = await this.watchlistService.getUserWatchlists(userId, {
         page: Number(page) || 1,
         limit: Number(limit) || 20,
         isPublic: isPublic === "true" ? true : undefined,
@@ -57,7 +62,7 @@ export class WatchlistController {
     try {
       const { id } = req.params;
       const userId = user!.id;
-      const updated = await watchlistService.updateWatchlist(id, req.body, userId);
+      const updated = await this.watchlistService.updateWatchlist(id, req.body, userId);
       res.json(updated);
     } catch (error) {
       res.status(400).json({ error: (error as Error).message });
@@ -68,7 +73,7 @@ export class WatchlistController {
     try {
       const { id } = req.params;
       const userId = user!.id;
-      await watchlistService.deleteWatchlist(id, userId);
+      await this.watchlistService.deleteWatchlist(id, userId);
       res.status(204).send();
     } catch (error) {
       res.status(400).json({ error: (error as Error).message });
@@ -83,7 +88,7 @@ export class WatchlistController {
 
       if (!movieId) return res.status(400).json({ error: "movieId required" });
 
-      const updatedWatchlist = await watchlistService.addMovieToWatchlist(id, movieId, userId);
+      const updatedWatchlist = await this.watchlistService.addMovieToWatchlist(id, movieId, userId);
       res.json(updatedWatchlist);
     } catch (error) {
       res.status(400).json({ error: (error as Error).message });
@@ -95,7 +100,7 @@ export class WatchlistController {
       const { id, movieId } = req.params;
       const userId = user!.id;
 
-      const updatedWatchlist = await watchlistService.removeMovieFromWatchlist(id, movieId, userId);
+      const updatedWatchlist = await this.watchlistService.removeMovieFromWatchlist(id, movieId, userId);
       res.json(updatedWatchlist);
     } catch (error) {
       res.status(400).json({ error: (error as Error).message });
@@ -108,7 +113,7 @@ export class WatchlistController {
       const { notes } = req.body;
       const userId = user!.id;
 
-      const updatedWatchlist = await watchlistService.updateMovieNotes(id, movieId, notes, userId);
+      const updatedWatchlist = await this.watchlistService.updateMovieNotes(id, movieId, notes, userId);
       res.json(updatedWatchlist);
     } catch (error) {
       res.status(400).json({ error: (error as Error).message });

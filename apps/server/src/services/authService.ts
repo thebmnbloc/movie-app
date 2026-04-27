@@ -12,15 +12,21 @@ const REFRESH_EXP = '7d';
 export class AuthService {
   private repo: AuthRepository;
 
-  constructor() {
-    this.repo = new AuthRepository(); // or inject later
+  constructor(repo: AuthRepository) {
+    this.repo = repo;
   }
 
+  // register with email, optional username, and password
+
   async register(data: { email: string; username?: string; password: string }) {
+
+    // Check for existing user
     const existing = await this.repo.findUserByEmail(data.email);
     if (existing) throw new Error('Email already in use');
 
-    const passwordHash = await bcrypt.hash(data.password, 12);
+    const passwordHash = await bcrypt.hash(data.password, 12); //hash password with bcrypt
+
+    // Create user and generate tokens
 
     const user = await this.repo.createUser({
       email: data.email,
@@ -31,9 +37,17 @@ export class AuthService {
     return this.generateTokens(user.id);
   }
 
+ // login with email and password, return access + refresh tokens
+
   async login(email: string, password: string) {
+
+    // Validate input
+    if (!email || !password) throw new Error('Email and password are required');
+
     const user = await this.repo.findUserByEmail(email);
     if (!user || !user.password) throw new Error('Invalid credentials');
+
+    // Compare password with bcrypt
 
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) throw new Error('Invalid credentials');
@@ -41,6 +55,8 @@ export class AuthService {
     return this.generateTokens(user.id);
   }
 
+  // refresh tokens: validate old, revoke, issue new
+  
   async refresh(refreshToken: string) {
     const hashed = this.hashToken(refreshToken);
 

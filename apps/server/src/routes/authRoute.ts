@@ -2,10 +2,16 @@
 import { Router } from 'express';
 import { AuthController } from '../controllers/authController';
 import { authorize, protect } from '../middlewares/authMiddleware';
+import { AuthRepository } from '../repositories/authRepository';
+import { AuthService } from '../services/authService';
 
 const router = Router();
 
-const controller = new AuthController();
+const authRepo = new AuthRepository();
+const authService = new AuthService(authRepo);
+const controller = new AuthController(authService);
+
+
 
 
 

@@ -1,7 +1,7 @@
 // src/services/movie.service.ts
 import { MovieRepository } from "../repositories/movieRepository";
 
-const movieRepo = new MovieRepository(); // or inject via constructor
+// const movieRepo = new MovieRepository(); // or inject via constructor
 
 // Reuse your original interfaces
 interface CreateMovieInput {
@@ -37,6 +37,12 @@ interface MovieFilters {
 }
 
 export class MovieService {
+  private movieRepo: MovieRepository;
+
+  constructor(movieRepo: MovieRepository) {
+    this.movieRepo = movieRepo;
+  }
+
   async createMovie(input: CreateMovieInput) {
     const { genreIds, ...movieData } = input;
 
@@ -47,7 +53,7 @@ export class MovieService {
 
     const slug = `${baseSlug}-${Date.now()}`;
 
-    return movieRepo.create({
+    return this.movieRepo.create({
       ...movieData,
       slug,
       genres: genreIds ? { connect: genreIds.map((id) => ({ id })) } : undefined,
@@ -55,11 +61,11 @@ export class MovieService {
   }
 
   async getMovieById(id: string) {
-    return movieRepo.findById(id);
+    return this.movieRepo.findById(id);
   }
 
   async getMovieBySlug(slug: string) {
-    return movieRepo.findBySlug(slug);
+    return this.movieRepo.findBySlug(slug);
   }
 
   async getMovies(filters: MovieFilters = {}) {
@@ -107,7 +113,7 @@ export class MovieService {
 
     const skip = (page - 1) * limit;
 
-    const { movies, total } = await movieRepo.findMany({
+    const { movies, total } = await this.movieRepo.findMany({
       where,
       orderBy: { [sortBy]: sortOrder },
       skip,
@@ -128,7 +134,7 @@ export class MovieService {
   async updateMovie(id: string, input: UpdateMovieInput) {
     const { genreIds, ...movieData } = input;
 
-    return movieRepo.update(id, {
+    return this.movieRepo.update(id, {
       ...movieData,
       genres: genreIds
         ? {
@@ -140,12 +146,12 @@ export class MovieService {
   }
 
   async deleteMovie(id: string) {
-    return movieRepo.delete(id);
+    return this.movieRepo.delete(id);
   }
 
   async getMovieStats(id: string) {
     const { reviewStats, watchlistCount, watchHistoryCount } =
-      await movieRepo.getStats(id);
+      await this.movieRepo.getStats(id);
 
     return {
       averageRating: reviewStats._avg.rating,
@@ -156,6 +162,6 @@ export class MovieService {
   }
 
   async getTrendingMovies(limit = 10) {
-    return movieRepo.getTrending(limit);
+    return this.movieRepo.getTrending(limit);
   }
 }
