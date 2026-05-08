@@ -1,13 +1,9 @@
 import express from 'express';
-import { MovieController } from '../controllers/movieController';
-import { MovieService } from '../services/movieService';
-import { MovieRepository } from '../repositories/movieRepository';
+import { createMovieController } from '../factories/movieFactory';
 
 const router = express.Router();
 
-const movieRepo = new MovieRepository();
-const movieService = new MovieService(movieRepo);
-const movieController = new MovieController(movieService);
+const movieController = createMovieController();
 
 router.post('/', movieController.createMovie.bind(movieController));
 router.get('/:id', movieController.getMovieById.bind(movieController));

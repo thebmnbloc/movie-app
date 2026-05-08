@@ -2,7 +2,7 @@
 import bcrypt from "bcrypt";
 import { UserRepository } from "../repositories/userRepository";
 
-const userRepo = new UserRepository(); // or inject via constructor in larger apps
+// const userRepo = new UserRepository(); // or inject via constructor in larger apps
 
 // Types (reuse or move to shared)
 interface CreateUserInput {

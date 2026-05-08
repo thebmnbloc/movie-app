@@ -70,7 +70,7 @@ export class WatchlistService {
     // const movie = await movieRepo.findById(movieId);
     // if (!movie) throw new Error("Movie not found");
 
-    const alreadyAdded = await watchlistRepo.isMovieInWatchlist(watchlistId, movieId);
+    const alreadyAdded = await this.watchlistRepo.isMovieInWatchlist(watchlistId, movieId);
     if (alreadyAdded) throw new Error("Movie already in watchlist");
 
     await this.watchlistRepo.addMovie(watchlistId, movieId);

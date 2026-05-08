@@ -1,4 +1,4 @@
-/*
+
 import { MovieRepository } from '../repositories/movieRepository';
 import { MovieService } from '../services/movieService';
 import { MovieController } from '../controllers/movieController';
@@ -14,5 +14,3 @@ export const createMovieController = (): MovieController => {
 
   return controller;
 };
-
-*/

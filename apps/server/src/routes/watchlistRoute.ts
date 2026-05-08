@@ -1,12 +1,13 @@
 import express from 'express';
-import { WatchlistController } from '../controllers/watchlistController';
+import { createWatchlistController } from '../factories/watchlistFactory';
+
 
 
 
 
 const router = express.Router();
 
-const watchlistController = new WatchlistController();
+const watchlistController = createWatchlistController();
 
 router.post('/', watchlistController.createWatchlist.bind(watchlistController));
 router.get('/:id', watchlistController.getWatchlistById.bind(watchlistController));

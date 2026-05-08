@@ -1,26 +1,17 @@
 // src/routes/authRoutes.ts
 import { Router } from 'express';
-import { AuthController } from '../controllers/authController';
-import { authorize, protect } from '../middlewares/authMiddleware';
-import { AuthRepository } from '../repositories/authRepository';
-import { AuthService } from '../services/authService';
+import { createAuthController } from '../factories/authFactory';
 
 const router = Router();
 
-const authRepo = new AuthRepository();
-const authService = new AuthService(authRepo);
-const controller = new AuthController(authService);
+const authController = createAuthController();
 
-
-
-
-
-router.post('/register', controller.register.bind(controller));
-router.post('/login', controller.login.bind(controller));
-router.post('/refresh', controller.refresh.bind(controller));
-router.post('/logout', controller.logout.bind(controller));
+router.post('/register', authController.register.bind(authController));
+router.post('/login', authController.login.bind(authController));
+router.post('/refresh', authController.refresh.bind(authController));
+router.post('/logout', authController.logout.bind(authController));
 
 // Protected example
-router.post('/logout-all', controller.logoutAll.bind(controller));
+router.post('/logout-all', authController.logoutAll.bind(authController));
 
 export default router;
